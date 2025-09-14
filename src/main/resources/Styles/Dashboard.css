@@ -1,6 +1,6 @@
 .left_menu_container{
     /*-fx-background-color: linear-gradient(to bottom , #296978, #1198b6);*/
-    -fx-background-color: #212121;
+    -fx-background-color: yellow;
     -fx-background-radius: 10px 10px 0 0;
     -fx-spacing: 20;
     -fx-padding: 30;
@@ -67,7 +67,7 @@
 }
 
 .main_background{
-    -fx-background-color: #101010;
+    -fx-background-color: yellow;
 }
 .main{
     /*-fx-background-color: linear-gradient(to bottom , #296978, #1198b6);*/
@@ -164,5 +164,5 @@
 }
 
 .logo{
-    -fx-fill: #1198b6;
+    -fx-fill: black;
 }

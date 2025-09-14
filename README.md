@@ -22,4 +22,4 @@ store user data.
 - Automated Task Scheduler
 - Email functionality
 
-If you want a better planner app, consider using Task Manager by rks746, it actually works in real life (the color and theme sucks thoogh). 
+If you want a better planner app, consider using Task Manager by rks746, it actually works in real life (the color and theme sucks though). 
