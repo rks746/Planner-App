@@ -1,14 +1,18 @@
 package com.plannerapp.plannerapp.Controllers.LoginWindow;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
 import com.plannerapp.plannerapp.Scenes.SceneManager;
+
 import javafx.event.ActionEvent;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
-
-import java.sql.*;
-
 import javafx.stage.Stage;
 
 public class CreateAccountController {
@@ -18,8 +22,10 @@ public class CreateAccountController {
     public Label error_lbl;
     public Button back_btn;
 
-    private SceneManager sceneManager = new SceneManager();
+    private final SceneManager sceneManager = new SceneManager();
     private static final String DATABASE_URL = "jdbc:sqlite:PlannerAppDB.db";
+    private static final String DUPLICATE_USERNAME_ERROR = "Error: Username already exists.";
+    private static final String INVALID_INPUT_ERROR = "Error: Username or Password must be entered";
 
     private boolean isInputValid(String username, String password) {
         return username != null && password != null && !username.trim().isEmpty() && !password.trim().isEmpty();
@@ -30,68 +36,65 @@ public class CreateAccountController {
     }
 
     private boolean isUsernameUnique(Connection connection, String username) throws SQLException {
-        String sql = "SELECT COUNT(*) FROM Users WHERE username = ?";
-        try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, username);
-            try (ResultSet resultSet = preparedStatement.executeQuery()) {
-                if (resultSet.next()) {
-                    int count = resultSet.getInt(1);
-                    return count == 0;
-                }
+        String sql = "SELECT 1 FROM Users WHERE username = ? LIMIT 1";
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setString(1, username);
+            try (ResultSet rs = stmt.executeQuery()) {
+                return !rs.next(); // Returns true if no rows found (username is unique)
             }
         }
-        return false;
+    }
+
+    private void showError(String message) {
+        error_lbl.setText(message);
+        error_lbl.setVisible(true);
     }
 
     private boolean addUserToDatabase(String username, String password) {
-        if (isInputValid(username, password)) {
-            try (Connection connection = establishConnection()) {
-                // Check for unique username
-                if (isUsernameUnique(connection, username)) {
-                    // Insert new user
-                    String insertSql = "INSERT INTO Users (username, password) VALUES (?, ?)";
-                    try (PreparedStatement preparedStatement = connection.prepareStatement(insertSql)) {
-                        preparedStatement.setString(1, username.trim());
-                        preparedStatement.setString(2, password.trim());
+        if (!isInputValid(username, password)) {
+            showError(INVALID_INPUT_ERROR);
+            return false;
+        }
 
-                        int rowsAffected = preparedStatement.executeUpdate();
-                        return rowsAffected > 0;  // Returns true if at least one row was affected (i.e., the user was added).
-                    }
-                } else {
-                    error_lbl.setText("Error: Username already exists.");
-                    error_lbl.setVisible(true);
-                    return false;
-                }
-            } catch (SQLException e) {
-                handleSQLException(e);
+        String trimmedUsername = username.trim();
+        String trimmedPassword = password.trim();
+
+        try (Connection connection = establishConnection()) {
+            if (!isUsernameUnique(connection, trimmedUsername)) {
+                showError(DUPLICATE_USERNAME_ERROR);
                 return false;
             }
-        } else {
-            error_lbl.setText("Error: Username or Password must be entered");
-            error_lbl.setVisible(true);
+
+            String insertSql = "INSERT INTO Users (username, password) VALUES (?, ?)";
+            try (PreparedStatement stmt = connection.prepareStatement(insertSql)) {
+                stmt.setString(1, trimmedUsername);
+                stmt.setString(2, trimmedPassword);
+                return stmt.executeUpdate() > 0;
+            }
+        } catch (SQLException e) {
+            handleSQLException(e);
             return false;
         }
     }
 
     private void handleSQLException(SQLException e) {
+        // SQLite constraint violation for unique username
         if ("23000".equals(e.getSQLState()) && e.getErrorCode() == 19) {
             System.out.println("SQLState: " + e.getSQLState());
             System.out.println("ErrorCode: " + e.getErrorCode());
-            error_lbl.setText("Error: Username already exists.");
-            error_lbl.setVisible(true);
+            showError(DUPLICATE_USERNAME_ERROR);
         } else {
             e.printStackTrace();
         }
     }
 
     public void userCreate(ActionEvent event) {
-        boolean addable = addUserToDatabase(newusername_fld.getText(), password_fld.getText());
-        if (addable) {
+        if (addUserToDatabase(newusername_fld.getText(), password_fld.getText())) {
             closeAndShowLogin();
         }
     }
 
-    public void onBack_btn(ActionEvent event){
+    public void onBack_btn(ActionEvent event) {
         closeAndShowLogin();
     }
 
